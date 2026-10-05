@@ -4,222 +4,170 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Asistente Tributario SUNAT</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
+  
+  <!-- Carga de Marked.js para interpretar sintaxis Markdown -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
+  <style>
     body {
+      font-family: Arial, sans-serif;
       background-color: #f4f6f9;
       display: flex;
       justify-content: center;
-      align-items: center;
-      min-height: 100vh;
       padding: 20px;
     }
-
     .chat-container {
       width: 100%;
-      max-width: 650px;
-      height: 85vh;
+      max-width: 600px;
       background: #ffffff;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      overflow: hidden;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
+      height: 80vh;
     }
-
     .chat-header {
-      background-color: #0d3b66;
-      color: #ffffff;
-      padding: 18px 20px;
+      background-color: #0b3c6d;
+      color: white;
+      padding: 15px;
       text-align: center;
     }
-
-    .chat-header h1 {
-      font-size: 1.25rem;
-      font-weight: 600;
-    }
-
-    .chat-header p {
-      font-size: 0.85rem;
-      opacity: 0.85;
-      margin-top: 4px;
-    }
-
-    .chat-messages {
+    .chat-header h2 { margin: 0; font-size: 1.2rem; }
+    .chat-header p { margin: 5px 0 0; font-size: 0.85rem; opacity: 0.9; }
+    .chat-box {
       flex: 1;
-      padding: 20px;
+      padding: 15px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
       gap: 12px;
     }
-
     .message {
-      max-width: 80%;
+      max-width: 85%;
       padding: 12px 16px;
-      border-radius: 10px;
+      border-radius: 12px;
+      line-height: 1.5;
       font-size: 0.95rem;
-      line-height: 1.4;
-      white-space: pre-wrap;
     }
-
-    .message.user {
+    .user-message {
+      background-color: #0b3c6d;
+      color: white;
       align-self: flex-end;
-      background-color: #0d3b66;
-      color: #ffffff;
-      border-bottom-right-radius: 2px;
     }
-
-    .message.bot {
-      align-self: flex-start;
+    .bot-message {
       background-color: #f0f2f5;
-      color: #222222;
-      border-bottom-left-radius: 2px;
+      color: #1c1e21;
+      align-self: flex-start;
+      border: 1px solid #e4e6eb;
     }
 
-    .message.system {
-      align-self: center;
-      background-color: #fff3cd;
-      color: #856404;
-      font-size: 0.85rem;
-      text-align: center;
+    /* Estilos para renderizar el Markdown correctamente */
+    .bot-message h1, .bot-message h2, .bot-message h3 {
+      margin-top: 10px;
+      margin-bottom: 6px;
+      color: #0b3c6d;
     }
+    .bot-message h1 { font-size: 1.15rem; }
+    .bot-message h2 { font-size: 1.05rem; }
+    .bot-message h3 { font-size: 0.95rem; }
+    .bot-message ul, .bot-message ol {
+      margin: 6px 0;
+      padding-left: 20px;
+    }
+    .bot-message p { margin: 4px 0; }
 
     .chat-input-area {
       display: flex;
-      padding: 15px;
-      border-top: 1px solid #e2e8f0;
-      background-color: #ffffff;
-      gap: 10px;
+      padding: 12px;
+      border-top: 1px solid #e4e6eb;
+      background: #fff;
     }
-
     .chat-input-area input {
       flex: 1;
-      padding: 12px 16px;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
       outline: none;
-      font-size: 0.95rem;
     }
-
-    .chat-input-area input:focus {
-      border-color: #0d3b66;
-    }
-
     .chat-input-area button {
-      background-color: #0d3b66;
+      background-color: #0b3c6d;
       color: white;
       border: none;
-      padding: 12px 20px;
-      border-radius: 8px;
+      padding: 10px 18px;
+      margin-left: 8px;
+      border-radius: 6px;
       cursor: pointer;
-      font-weight: 600;
-      transition: background-color 0.2s;
     }
-
-    .chat-input-area button:hover {
-      background-color: #092846;
-    }
-
-    .chat-input-area button:disabled {
-      background-color: #94a3b8;
-      cursor: not-allowed;
-    }
+    .chat-input-area button:hover { background-color: #082d52; }
   </style>
 </head>
 <body>
 
-  <div class="chat-container">
-    <div class="chat-header">
-      <h1>Asistente Tributario SUNAT</h1>
-      <p>Consultas sobre IGV, SPOT, Retenciones y Comprobantes</p>
-    </div>
+<div class="chat-container">
+  <div class="chat-header">
+    <h2>Asistente Tributario SUNAT</h2>
+    <p>Consultas sobre IGV, SPOT, Retenciones y Comprobantes</p>
+  </div>
 
-    <div class="chat-messages" id="chatMessages">
-      <div class="message bot">Hola, soy tu asistente tributario. ¿En qué consulta sobre normativa SUNAT, facturación o detracciones puedo ayudarte hoy?</div>
-    </div>
-
-    <div class="chat-input-area">
-      <input type="text" id="userInput" placeholder="Escribe tu consulta tributaria aquí..." onkeydown="if(event.key === 'Enter') sendMessage()">
-      <button onclick="sendMessage()" id="sendBtn">Enviar</button>
+  <div class="chat-box" id="chatBox">
+    <div class="message bot-message">
+      Hola, soy tu asistente tributario. ¿En qué consulta sobre normativa SUNAT, facturación o detracciones puedo ayudarte hoy?
     </div>
   </div>
 
-  <script>
-    const WEBHOOK_URL = "https://asistentetributariosecun.app.n8n.cloud/webhook/ASISTENTE";
+  <div class="chat-input-area">
+    <input type="text" id="userInput" placeholder="Escribe tu consulta tributaria aquí..." onkeypress="handleKeyPress(event)">
+    <button onclick="sendMessage()">Enviar</button>
+  </div>
+</div>
 
-    async function sendMessage() {
-      const input = document.getElementById('userInput');
-      const sendBtn = document.getElementById('sendBtn');
-      const messagesContainer = document.getElementById('chatMessages');
-      const text = input.value.trim();
+<script>
+  const WEBHOOK_URL = 'https://asistentetributariosecun.app.n8n.cloud/webhook/ASISTENTE';
 
-      if (!text) return;
+  async function sendMessage() {
+    const input = document.getElementById('userInput');
+    const message = input.value.trim();
+    if (!message) return;
 
-      appendMessage(text, 'user');
-      input.value = '';
-      input.disabled = true;
-      sendBtn.disabled = true;
+    appendMessage(message, 'user-message');
+    input.value = '';
 
-      const loadingDiv = document.createElement('div');
-      loadingDiv.className = 'message bot';
-      loadingDiv.id = 'loadingMessage';
-      loadingDiv.textContent = 'Consultando normativa SUNAT...';
-      messagesContainer.appendChild(loadingDiv);
-      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    const loadingDiv = appendMessage('Consultando normativa SUNAT...', 'bot-message');
 
-      try {
-        const response = await fetch(WEBHOOK_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: text })
-        });
+    try {
+      const response = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: message })
+      });
 
-        const data = await response.json();
-        document.getElementById('loadingMessage').remove();
+      const data = await response.json();
+      const botResponse = typeof data === 'string' ? data : (data.output || data.response || JSON.stringify(data));
 
-        let botResponse = "No se recibió respuesta válida del asistente.";
-        if (typeof data === 'string') {
-          botResponse = data;
-        } else if (data.output) {
-          botResponse = data.output;
-        } else if (data.text) {
-          botResponse = data.text;
-        } else if (data.message) {
-          botResponse = data.message;
-        } else {
-          botResponse = JSON.stringify(data);
-        }
+      // Renderiza Markdown a HTML real mediante marked.js
+      loadingDiv.innerHTML = marked.parse(botResponse);
 
-        appendMessage(botResponse, 'bot');
-
-      } catch (error) {
-        if (document.getElementById('loadingMessage')) {
-          document.getElementById('loadingMessage').remove();
-        }
-        appendMessage("Error al conectar con el asistente tributario. Verifica tu conexión o el estado del flujo en n8n.", "system");
-        console.error("Error:", error);
-      } finally {
-        input.disabled = false;
-        sendBtn.disabled = false;
-        input.focus();
-      }
+    } catch (error) {
+      loadingDiv.innerText = 'Error al conectar con el servidor. Inténtalo de nuevo.';
+      console.error(error);
     }
+  }
 
-    function appendMessage(text, type) {
-      const messagesContainer = document.getElementById('chatMessages');
-      const msgDiv = document.createElement('div');
-      msgDiv.className = `message ${type}`;
-      msgDiv.textContent = text;
-      messagesContainer.appendChild(msgDiv);
-      messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }
-  </script>
+  function appendMessage(text, className) {
+    const chatBox = document.getElementById('chatBox');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${className}`;
+    messageDiv.innerText = text;
+    chatBox.appendChild(messageDiv);
+    chatBox.scrollTop = chatBox.scrollHeight;
+    return messageDiv;
+  }
+
+  function handleKeyPress(event) {
+    if (event.key === 'Enter') sendMessage();
+  }
+</script>
+
 </body>
 </html>
