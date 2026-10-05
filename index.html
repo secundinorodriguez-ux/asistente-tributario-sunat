@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Asistente Tributario SUNAT</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: #f4f6f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .chat-container {
+      width: 100%;
+      max-width: 650px;
+      height: 85vh;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-header {
+      background-color: #0d3b66;
+      color: #ffffff;
+      padding: 18px 20px;
+      text-align: center;
+    }
+
+    .chat-header h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .chat-header p {
+      font-size: 0.85rem;
+      opacity: 0.85;
+      margin-top: 4px;
+    }
+
+    .chat-messages {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .message {
+      max-width: 80%;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      line-height: 1.4;
+      white-space: pre-wrap;
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background-color: #0d3b66;
+      color: #ffffff;
+      border-bottom-right-radius: 2px;
+    }
+
+    .message.bot {
+      align-self: flex-start;
+      background-color: #f0f2f5;
+      color: #222222;
+      border-bottom-left-radius: 2px;
+    }
+
+    .message.system {
+      align-self: center;
+      background-color: #fff3cd;
+      color: #856404;
+      font-size: 0.85rem;
+      text-align: center;
+    }
+
+    .chat-input-area {
+      display: flex;
+      padding: 15px;
+      border-top: 1px solid #e2e8f0;
+      background-color: #ffffff;
+      gap: 10px;
+    }
+
+    .chat-input-area input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      outline: none;
+      font-size: 0.95rem;
+    }
+
+    .chat-input-area input:focus {
+      border-color: #0d3b66;
+    }
+
+    .chat-input-area button {
+      background-color: #0d3b66;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background-color 0.2s;
+    }
+
+    .chat-input-area button:hover {
+      background-color: #092846;
+    }
+
+    .chat-input-area button:disabled {
+      background-color: #94a3b8;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="chat-container">
+    <div class="chat-header">
+      <h1>Asistente Tributario SUNAT</h1>
+      <p>Consultas sobre IGV, SPOT, Retenciones y Comprobantes</p>
+    </div>
+
+    <div class="chat-messages" id="chatMessages">
+      <div class="message bot">Hola, soy tu asistente tributario. ¿En qué consulta sobre normativa SUNAT, facturación o detracciones puedo ayudarte hoy?</div>
+    </div>
+
+    <div class="chat-input-area">
+      <input type="text" id="userInput" placeholder="Escribe tu consulta tributaria aquí..." onkeydown="if(event.key === 'Enter') sendMessage()">
+      <button onclick="sendMessage()" id="sendBtn">Enviar</button>
+    </div>
+  </div>
+
+  <script>
+    const WEBHOOK_URL = "https://asistentetributariosecun.app.n8n.cloud/webhook/ASISTENTE";
+
+    async function sendMessage() {
+      const input = document.getElementById('userInput');
+      const sendBtn = document.getElementById('sendBtn');
+      const messagesContainer = document.getElementById('chatMessages');
+      const text = input.value.trim();
+
+      if (!text) return;
+
+      appendMessage(text, 'user');
+      input.value = '';
+      input.disabled = true;
+      sendBtn.disabled = true;
+
+      const loadingDiv = document.createElement('div');
+      loadingDiv.className = 'message bot';
+      loadingDiv.id = 'loadingMessage';
+      loadingDiv.textContent = 'Consultando normativa SUNAT...';
+      messagesContainer.appendChild(loadingDiv);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+      try {
+        const response = await fetch(WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text })
+        });
+
+        const data = await response.json();
+        document.getElementById('loadingMessage').remove();
+
+        let botResponse = "No se recibió respuesta válida del asistente.";
+        if (typeof data === 'string') {
+          botResponse = data;
+        } else if (data.output) {
+          botResponse = data.output;
+        } else if (data.text) {
+          botResponse = data.text;
+        } else if (data.message) {
+          botResponse = data.message;
+        } else {
+          botResponse = JSON.stringify(data);
+        }
+
+        appendMessage(botResponse, 'bot');
+
+      } catch (error) {
+        if (document.getElementById('loadingMessage')) {
+          document.getElementById('loadingMessage').remove();
+        }
+        appendMessage("Error al conectar con el asistente tributario. Verifica tu conexión o el estado del flujo en n8n.", "system");
+        console.error("Error:", error);
+      } finally {
+        input.disabled = false;
+        sendBtn.disabled = false;
+        input.focus();
+      }
+    }
+
+    function appendMessage(text, type) {
+      const messagesContainer = document.getElementById('chatMessages');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `message ${type}`;
+      msgDiv.textContent = text;
+      messagesContainer.appendChild(msgDiv);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+  </script>
+</body>
+</html>
